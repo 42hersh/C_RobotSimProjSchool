@@ -1,3 +1,4 @@
+
 const int LEFT_LINE_SENSOR = 0;
 const int RIGHT_LINE_SENSOR = 4;
 const int COLOR_SENSOR = 8;
@@ -5,17 +6,20 @@ const int COLOR_SENSOR = 8;
 const int MOTOR_FORWARD = 90;
 const int MOTOR_TURN = 60;          // Reverse wheel speed for sharp turn
 const int LINE_THRESHOLD = 400;     // <400 = ON BLACK
-const int BLUE_COLOR = 3;
+const int BLUE_COLOR=3;
+bool pickedOnce = false;
 
 bool started = false;
 bool carryingObject = false;
 
 void setup() {
     lcd("Press sw1 to begin");
-    keep_down();
+    keep_down();  // Gripper open initially
 }
 
 void loop() {
+    
+    // --- START ---
     if (!started && sw1() == 0) {
         beep();
         lcd("Starting...");
@@ -29,26 +33,28 @@ void loop() {
         int right = analog(4);
         int color = analog(8);
 
-        // --- PICK UP BLUE ---
-        if (!carryingObject && color == BLUE_COLOR) {
+        // --- PICK UP BLUE OBJECT ---
+        if (!carryingObject && analog(8) >1 && !pickedOnce) {
+            keep_up();
             motor(1, 0);
             motor(2, 0);
             lcd("Blue object!");
             sleep(500);
-            keep_up();
+            keep_up();          // Close gripper & lift object
             sleep(1200);
             carryingObject = true;
             lcd("Picked up");
             sleep(800);
+            pickedOnce = true;
         }
 
-        // --- DROP ON SW2 ---
+        // --- DROP BLUE OBJECT ON SW2 PRESS ---
         if (carryingObject && sw2() == 0) {
             motor(1, 0);
             motor(2, 0);
             lcd("Dropping...");
             sleep(500);
-            keep_down();
+            keep_down();        // Open gripper & release object
             sleep(1200);
             carryingObject = false;
             lcd("Dropped");
@@ -56,13 +62,13 @@ void loop() {
         }
 
         // --- LINE FOLLOWING ---
-        if (!carryingObject || sw2() == 1) {
-            followLine(left, right);
-        }
+        followLine(left, right);
+
+        sleep(10);  // Small delay for stability
     }
 }
 
-// --- LINE FOLLOWING: SHARP TURNS ---
+// --- LINE FOLLOWING: SHARP TURNS (UNCHANGED) ---
 void followLine(int L, int R) {
     bool leftOnBlack = (L < LINE_THRESHOLD);
     bool rightOnBlack = (R < LINE_THRESHOLD);
